@@ -45,3 +45,7 @@ A lightweight, fully client-side web application built with pure **HTML5, CSS3, 
 1. Download or clone this repository:
    ```bash
    git clone https://github.com/anknpolley123/Image-to-latex_converter
+
+ ```
+
+# Preview 
