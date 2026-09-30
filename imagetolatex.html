@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Image to latex (Native Camera Input)</title>
+
+  <!-- MathJax for rendering math output -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <!-- Client-side OCR -->
+  
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f4f6f8; color: #1a1a1a; padding: 16px; max-width: 500px; margin: 0 auto; }
+
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+      margin-bottom: 16px;
+    }
+
+    h2 { font-size: 18px; margin-bottom: 12px; text-align: center; }
+
+    /* Custom File Button */
+
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      width: 100%;
+    }
+
+    .btn-upload {
+      border: 2px dashed #007bff;
+      color: #007bff;
+      background-color: #eef6ff;
+      padding: 18px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      width: 100%;
+      text-align: center;
+      cursor: pointer;
+      display: block;
+    }
+
+    .file-input-wrapper input[type=file] {
+      font-size: 100px;
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+      cursor: pointer;
+      height: 100%;
+      width: 100%;
+    }
+
+    .preview-box {
+      margin-top: 12px;
+      text-align: center;
+      max-height: 200px;
+      overflow: hidden;
+      border-radius: 6px;
+      background: #f8f9fa;
+      display: none;
+    }
+
+    .preview-box img {
+      max-width: 100%;
+      height: auto;
+      object-fit: contain;
+    }
+
+    .status {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #666;
+      text-align: center;
+    }
+
+    .math-preview {
+      padding: 16px;
+      background: #fafafa;
+      border: 1px solid #eee;
+      border-radius: 6px;
+      text-align: center;
+      min-height: 60px;
+      font-size: 18px;
+      overflow-x: auto;
+      margin-top: 8px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 70px;
+      margin-top: 8px;
+      padding: 8px;
+      font-family: monospace;
+      font-size: 13px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      resize: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>img to latex </h2>
+
+  <div class="card">
+
+    <!-- Native Camera Capture Input -->
+
+    <div class="file-input-wrapper">
+      <div class="btn-upload"> Take Photo / Upload Image</div>
+
+      <!-- accept="image/*" + capture="environment" opens native camera on mobile -->
+      <input type="file" id="image-input" accept="image/*" capture="environment" />
+    </div>
+
+    <div id="preview-container" class="preview-box">
+      <img id="image-preview" src="" alt="Captured Image" />
+    </div>
+
+    <div id="status" class="status">Select or take a photo of an equation to convert.</div>
+  </div>
+
+  <div class="card">
+    <h3>Rendered Formula</h3>
+    <div id="math-rendered" class="math-preview">\(\text{Preview will appear here}\)</div>
+
+    <h3 style="margin-top: 14px;">LaTeX Output</h3>
+    <textarea id="latex-output" readonly placeholder="LaTeX string output..."></textarea>
+  </div>
+
+      <!-- accept="image/*" + capture="environment" opens native camera on mobile -->
+
+      <input type="file" id="image-input" accept="image/*" capture="environment" />
+    </div>
+
+    <div id="preview-container" class="preview-box">
+      <img id="image-preview" src="" alt="Captured Image" />
+    </div>
+
+    <div id="status" class="status">Select or take a photo of an equation to convert.</div>
+  </div>
+
+  <div class="card">
+    <h3>Rendered Formula</h3>
+    <div id="math-rendered" class="math-preview">\(\text{Preview will appear here}\)</div>
+
+    <h3 style="margin-top: 14px;">LaTeX Output</h3>
+    <textarea id="latex-output" readonly placeholder="LaTeX string output..."></textarea>
+  </div>
+
+  <!-- Hidden Canvas for Processing -->
+
+  <canvas id="canvas" style="display:none;"></canvas>
+
+  <script>
+    const imageInput = document.getElementById('image-input');
+    const imagePreview = document.getElementById('image-preview');
+    const previewContainer = document.getElementById('preview-container');
+    const statusDiv = document.getElementById('status');
+    const mathRendered = document.getElementById('math-rendered');
+    const latexOutput = document.getElementById('latex-output');
+    const canvas = document.getElementById('canvas');
+
+    // Rule-based LaTeX string conversion
+
+    function parseToLaTeX(text) {
+      let result = text.trim();
+      result = result.replace(/\n/g, ' ');
+
+      result = result.replace(/<=/g, '\\le ')
+                     .replace(/>=/g, '\\ge ')
+                     .replace(/!=/g, '\\neq ')
+                     .replace(/\*/g, '\\cdot ')
+                     .replace(/sqrt\(([^)]+)\)/gi, '\\sqrt{$1}')
+                     .replace(/sum\b/gi, '\\sum ')
+                     .replace(/log\b/gi, '\\log ')
+                     .replace(/\(([^)]+)\)\/\(([^)]+)\)/g, '\\frac{$1}{$2}');
+
+      return result;
+    }
+
+    imageInput.addEventListener('change', async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      // Show preview
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        imagePreview.src = e.target.result;
+        previewContainer.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+
+      statusDiv.textContent = "Processing image using browser OCR...";
+
+     // Draw image to canvas to pass to OCR
+
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      
+      img.onload = async () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+
+        try {
+          const worker = await Tesseract.createWorker('eng');
+          const ret = await worker.recognize(canvas);
+          await worker.terminate();
+
+          const rawText = ret.data.text;
+          const latex = parseToLaTeX(rawText);
+
+          latexOutput.value = latex;
+          mathRendered.innerHTML = `\\[${latex}\\]`;
+          
+          if (window.MathJax) {
+            MathJax.typesetPromise([mathRendered]);
+          }
+
+          statusDiv.textContent = "Processing complete!";
+        } catch (err) {
+          statusDiv.textContent = "OCR Error: " + err.message;
+        }
+      };
+    });
+  </script>
+</body>
+</html>
