@@ -1,6 +1,3 @@
-# Image-to-latex_converter
-A web bases html tool which is used to convert image into latex.
-
 # 📷 Image to LaTeX Converter (Offline & Web-Native)
 
 A lightweight, fully client-side web application built with pure **HTML5, CSS3, and JavaScript**. It allows users to capture handwritten or printed math equations directly using their mobile camera or file upload, run local Optical Character Recognition (OCR) inside the browser via WebAssembly, and instantly render formatted LaTeX equations using MathJax.
@@ -47,4 +44,4 @@ A lightweight, fully client-side web application built with pure **HTML5, CSS3, 
 ### Option 1: Direct File Usage (No Setup Required)
 1. Download or clone this repository:
    ```bash
-   git clone [https://github.com/your-username/image-to-latex.git](https://github.com/your-username/image-to-latex.git)
+   git clone [https://github.com/your-username/image-to-latex.git]
