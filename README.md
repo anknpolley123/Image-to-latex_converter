@@ -49,3 +49,4 @@ A lightweight, fully client-side web application built with pure **HTML5, CSS3, 
    ```
 
 # Preview 
+![Image to LaTeX Preview](./assets/preview.png)
